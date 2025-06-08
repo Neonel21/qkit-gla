@@ -6,6 +6,7 @@ from qkit import visa
 from time import sleep
 import logging
 import numpy as np
+from typing import List #Imported since there was no mention of the expected python version
 
 class Keysight_VNA_P50xxA(Instrument):
     '''
@@ -75,6 +76,7 @@ class Keysight_VNA_P50xxA(Instrument):
         self.add_function("start_measurement")
         self.add_function("pre_measurement")
         self.add_function("post_measurement")
+        self.add_function("set_segment")
 
         self.get_all()
 
@@ -305,3 +307,18 @@ class Keysight_VNA_P50xxA(Instrument):
         self.write("SENS{}:AVER OFF".format(self._ci))
         self.hold(False)
 
+
+    def set_segment(self, start_f: List[float], stop_f: List[float], powers: List[float], bandwidths: List[float]): #Used to hint the type of List when called 
+        
+        if not (len(start_f) == len(stop_f) == len(powers) == len(bandwidths)):
+            raise ValueError("All input lists must be the same length.")
+        
+        self.write(f"SENS{self._ci}:SEGM:DEL:ALL")
+
+        for i, (start, stop, p, b) in enumerate(zip(start_f, stop_f, powers, bandwidths), start=1):
+            self.write(f"SENS{self._ci}:SEGM{i}:FREQ:STAR {start}")
+            self.write(f"SENS{self._ci}:SEGM{i}:FREQ:STOP {stop}")
+            self.write(f"SENS{self._ci}:SEGM{i}:POW {p}")
+            self.write(f"SENS{self._ci}:SEGM{i}:BWID {b}")
+
+        self.write(f"SEGM{self._ci}:SEGM:STAT ON")
