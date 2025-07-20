@@ -5,8 +5,8 @@
 
 import logging
 import numpy as np
-from typing import List
 import time
+from typing import List
 
 # Import the new base class and necessary decorators/metadata from instrument_basev2
 from qkit.core.instrument_basev2 import (
@@ -16,7 +16,7 @@ from qkit.core.instrument_basev2 import (
     QkitFunction,
     PropertyMetadata,
     CachePolicy,
-    interval_check # Assuming interval_check is also in instrument_basev2.py
+    interval_check
 )
 
 # You can remove 'from qkit import visa' if it was present, as it's not used directly anymore.
@@ -54,17 +54,18 @@ class Keysight_VNA_P50xxA(PrologixGPIBInstrument):
 
     @QkitProperty(
         type=int, units="",
-        arg_checker=interval_check(1, None), # minval=1
-        documentation="Sets or gets the number of averages for the sweep."
+        arg_checker=interval_check(1, None) # minval=1
     )
     def averages(self) -> int:
+        """Sets or gets the number of averages for the sweep."""
         return int(self.ask(f"SENS{self._ci}:AVER:COUN?"))
     @averages.setter
     def averages(self, value: int):
         self.write(f"SENS{self._ci}:AVER:COUN {value}")
 
-    @QkitProperty(type=bool, documentation="Enables or disables averaging.")
+    @QkitProperty(type=bool)
     def Average(self) -> bool: # Note: Capital 'A' as in original
+        """Enables or disables averaging."""
         return bool(int(self.ask(f"SENS{self._ci}:AVER?")))
     @Average.setter
     def Average(self, value: bool):
@@ -72,10 +73,10 @@ class Keysight_VNA_P50xxA(PrologixGPIBInstrument):
 
     @QkitProperty(
         type=float, units="Hz",
-        arg_checker=interval_check(1.0, 15e6), # minval=1, maxval=15e6
-        documentation="Sets or gets the Intermediate Frequency (IF) bandwidth."
+        arg_checker=interval_check(1.0, 15e6) # minval=1, maxval=15e6
     )
     def bandwidth(self) -> float:
+        """Sets or gets the Intermediate Frequency (IF) bandwidth."""
         return float(self.ask(f"SENS{self._ci}:BWID?"))
     @bandwidth.setter
     def bandwidth(self, value: float):
@@ -83,17 +84,18 @@ class Keysight_VNA_P50xxA(PrologixGPIBInstrument):
 
     @QkitProperty(
         type=float, units="Hz",
-        arg_checker=interval_check(9e3, 20e9), # minval=9e3, maxval=20e9
-        documentation="Sets or gets the center frequency of the sweep."
+        arg_checker=interval_check(9e3, 20e9) # minval=9e3, maxval=20e9
     )
     def centerfreq(self) -> float:
+        """Sets or gets the center frequency of the sweep."""
         return float(self.ask(f"SENS{self._ci}:FREQ:CENT?"))
     @centerfreq.setter
     def centerfreq(self, value: float):
         self.write(f"SENS{self._ci}:FREQ:CENT {value}")
 
-    @QkitProperty(type=bool, documentation="Enables or disables Continuous Wave (CW) mode.")
+    @QkitProperty(type=bool)
     def cw(self) -> bool:
+        """Enables or disables Continuous Wave (CW) mode."""
         return self.cw_mode # This was a locally stored flag in original
     @cw.setter
     def cw(self, status: bool):
@@ -106,10 +108,10 @@ class Keysight_VNA_P50xxA(PrologixGPIBInstrument):
 
     @QkitProperty(
         type=float, units="Hz",
-        arg_checker=interval_check(10e6, 20e9), # minval=10e6, maxval=20e9
-        documentation="Sets or gets the Continuous Wave (CW) frequency."
+        arg_checker=interval_check(10e6, 20e9) # minval=10e6, maxval=20e9
     )
     def cwfreq(self) -> float:
+        """Sets or gets the Continuous Wave (CW) frequency."""
         return float(self.ask(f"SENS{self._ci}:FREQ:CW?"))
     @cwfreq.setter
     def cwfreq(self, value: float):
@@ -120,24 +122,27 @@ class Keysight_VNA_P50xxA(PrologixGPIBInstrument):
 
     @QkitProperty(
         type=float, units="s",
-        arg_checker=interval_check(-10.0, 10.0), # minval=-10, maxval=10
-        documentation="Sets or gets the electronic delay."
+        arg_checker=interval_check(-10.0, 10.0) # minval=-10, maxval=10
     )
     def edel(self) -> float:
+        """Sets or gets the electronic delay."""
         # Original logic was complex here, selecting active measurement if none.
         # This implementation simplifies to assume an active measurement or handles default.
         ch_sel = self.ask(f"CALC{self._ci}:PAR:SEL?").strip("\n")
         if ch_sel == '""':
             ch_ = self.ask(f"CALC{self._ci}:PAR:CAT?")
-            self.write(f"CALC{self._ci}:PAR:SEL {ch_.strip('\"').split(',')[0]}")
+            strip_char = '"' # Variable to hold the double quote character
+            self.write(f"CALC{self._ci}:PAR:SEL {ch_.strip(strip_char).split(',')[0]}")
         self._edel = float(self.ask(f"CALC{self._ci}:CORR:EDEL:TIME?"))
         return self._edel
     @edel.setter
     def edel(self, value: float):
+        """Sets or gets the electronic delay."""
         ch_sel = self.ask(f"CALC{self._ci}:PAR:SEL?").strip("\n")
         if ch_sel == '""':
             ch_ = self.ask(f"CALC{self._ci}:PAR:CAT?")
-            self.write(f"CALC{self._ci}:PAR:SEL {ch_.strip('\"').split(',')[0]}")
+            strip_char = '"' # Variable to hold the double quote character
+            self.write(f"CALC{self._ci}:PAR:SEL {ch_.strip(strip_char).split(',')[0]}")
         self.write(f"CALC{self._ci}:CORR:EDEL:TIME {value}")
         self._edel = value # Update local cache
 
@@ -145,81 +150,93 @@ class Keysight_VNA_P50xxA(PrologixGPIBInstrument):
     @QkitProperty(
         type=int, units="",
         arg_checker=interval_check(1, 1e5), # minval=1, maxval=1e5
-        tags=["sweep"],
-        documentation="Sets or gets the number of points in the sweep."
+        tags=["sweep"]
     )
     def nop(self) -> int:
+        """Sets or gets the number of points in the sweep."""
         return int(self.ask(f"SENS{self._ci}:SWE:POIN?"))
     @nop.setter
     def nop(self, value: int):
         self.write(f"SENS{self._ci}:SWE:POIN {value}")
 
-    @QkitProperty(type=float, units="dBm", documentation="Sets or gets the output power.")
+    @QkitProperty(type=float, units="dBm")
     def power(self) -> float:
+        """Sets or gets the output power."""
         # Original accepted a 'port' argument in getter/setter, here it's fixed to port 1
         return float(self.ask(f"SOUR{self._ci}:POW1?"))
     @power.setter
     def power(self, value: float):
+        """Sets or gets the output power."""
         self.write(f"SOUR{self._ci}:POW1 {value}")
 
-    @QkitProperty(type=bool, documentation="Enables or disables RF output.")
+    @QkitProperty(type=bool)
     def rf_output(self) -> bool:
+        """Enables or disables RF output."""
         return bool(int(self.ask("OUTP?")))
     @rf_output.setter
     def rf_output(self, state: bool):
+        """Enables or disables RF output."""
         self.write(f"OUTP {1 if state else 0}")
 
     @QkitProperty(
         type=float, units="Hz",
-        arg_checker=interval_check(70.0, 20e9), # minval=70, maxval=20e9
-        documentation="Sets or gets the frequency span of the sweep."
+        arg_checker=interval_check(70.0, 20e9) # minval=70, maxval=20e9
     )
     def span(self) -> float:
+        """Sets or gets the frequency span of the sweep."""
         return float(self.ask(f"SENS{self._ci}:FREQ:SPAN?"))
     @span.setter
     def span(self, value: float):
+        """Sets or gets the frequency span of the sweep."""
         self.write(f"SENS{self._ci}:FREQ:SPAN {value}")
 
     @QkitProperty(
         type=float, units="Hz",
-        arg_checker=interval_check(9e3, 20e9), # minval=9e3, maxval=20e9
-        documentation="Sets or gets the start frequency of the sweep."
+        arg_checker=interval_check(9e3, 20e9) # minval=9e3, maxval=20e9
     )
     def startfreq(self) -> float:
+        """Sets or gets the start frequency of the sweep."""
         return float(self.ask(f"SENS{self._ci}:FREQ:START?"))
     @startfreq.setter
     def startfreq(self, value: float):
+        """Sets or gets the start frequency of the sweep."""
         self.write(f"SENS{self._ci}:FREQ:START {value}")
 
     @QkitProperty(
         type=float, units="Hz",
-        arg_checker=interval_check(9e3, 20e9), # minval=9e3, maxval=20e9
-        documentation="Sets or gets the stop frequency of the sweep."
+        arg_checker=interval_check(9e3, 20e9) # minval=9e3, maxval=20e9
     )
     def stopfreq(self) -> float:
+        """Sets or gets the stop frequency of the sweep."""
         return float(self.ask(f"SENS{self._ci}:FREQ:STOP?"))
     @stopfreq.setter
     def stopfreq(self, value: float):
+        """Sets or gets the stop frequency of the sweep."""
         self.write(f"SENS{self._ci}:FREQ:STOP {value}")
 
-    @QkitProperty(type=str, documentation="Sets or gets the sweep mode.")
+    @QkitProperty(type=str)
     def sweepmode(self) -> str:
+        """Sets or gets the sweep mode."""
         return self.ask(f"SENS{self._ci}:SWE:MODE?").strip()
     @sweepmode.setter
     def sweepmode(self, value: str):
+        """Sets or gets the sweep mode."""
         if value.upper() in ["CONT", "HOLD", "SING", "GRO"]:
             self.write(f"SENS{self._ci}:SWE:MODE {value.upper()}")
         else:
             raise ValueError(f"Sweep mode unknown. Use: ['CONT','HOLD','SING','GRO']. Got '{value}'")
 
-    @QkitProperty(type=float, units="s", cache_policy=CachePolicy.ALWAYS_REFRESH, documentation="Gets the sweep time.")
+    @QkitProperty(type=float, units="s")#, cache_policy=CachePolicy.ALWAYS_REFRESH)
     def sweeptime(self) -> float:
+        """Gets the sweep time."""
         return float(self.ask(f"SENS{self._ci}:SWE:TIME?"))
 
-    @QkitProperty(type=float, units="s", cache_policy=CachePolicy.ALWAYS_REFRESH, documentation="Gets the total sweep time including averages.")
+    @QkitProperty(type=float, units="s")#, cache_policy=CachePolicy.ALWAYS_REFRESH)
     def sweeptime_averages(self) -> float:
+        """Gets the total sweep time including averages."""
         # Calls the getter for sweeptime and averages properties
         return self.sweeptime * self.averages # Accessing properties directly
+
 
     # --- Functions (formerly add_function) ---
 
@@ -352,7 +369,7 @@ class Keysight_VNA_P50xxA(PrologixGPIBInstrument):
             powers (List[float]): Power level for each segment (dBm).
             bandwidths (List[float]): IF bandwidth for each segment (Hz).
         """
-        if not (len(start_freqs) == len(stop_freqs) == len(powers) == len(bandwidths)):
+        if not (len(start_freqs) == len(powers) == len(bandwidths)):
             raise ValueError("All input lists must be the same length.")
 
         n_segments = len(start_freqs)
